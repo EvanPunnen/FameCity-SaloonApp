@@ -1,4 +1,5 @@
 import React from 'react';
+import logoImg from '../assets/logo.jpg';
 import { X, Printer, CheckCircle, Share2, Scissors, ArrowDown } from 'lucide-react';
 import { formatCurrency, formatDate, formatTime } from '../utils/helpers';
 
@@ -36,7 +37,7 @@ export default function ReceiptModal({ isOpen, onClose, transaction, salonInfo }
             <div className="text-center pb-4 border-b border-dashed border-slate-300">
               <div className="flex justify-center mb-2">
                 <img
-                  src={salonInfo.logo || '/logo.jpg'}
+                  src={logoImg}
                   alt={salonInfo.name}
                   className="w-16 h-16 rounded-full object-cover border-2 border-blue-500 shadow-xs"
                 />

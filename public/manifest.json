@@ -1,20 +1,21 @@
 {
-  "name": "Fame City Saloon POS & Owner Intelligence",
+  "name": "Fame City Saloon POS",
   "short_name": "Fame City",
-  "start_url": "/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#ffffff",
-  "theme_color": "#d97706",
+  "theme_color": "#2563eb",
   "icons": [
     {
-      "src": "/logo.jpg",
+      "src": "logo.jpg",
       "sizes": "192x192",
       "type": "image/jpeg",
       "purpose": "any maskable"
     },
     {
-      "src": "/logo.jpg",
+      "src": "logo.jpg",
       "sizes": "512x512",
       "type": "image/jpeg",
       "purpose": "any maskable"

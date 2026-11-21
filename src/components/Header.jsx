@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import logoImg from '../assets/logo.jpg';
 import {
   Scissors,
   Shield,
@@ -78,9 +79,9 @@ export default function Header({
         <div className="flex items-center gap-3">
           <div className="relative group cursor-pointer" onClick={() => onSwitchView('tablet')}>
             <img
-              src={salonInfo.logo || '/logo.jpg'}
+              src={logoImg}
               alt={salonInfo.name}
-              className="w-12 h-12 rounded-full object-cover border-2 border-amber-400 shadow-sm group-hover:scale-105 transition"
+              className="w-12 h-12 rounded-full object-cover border-2 border-blue-500 shadow-sm group-hover:scale-105 transition"
             />
             <span className="absolute -bottom-1 -right-1 bg-slate-900 text-amber-400 text-[8px] font-black px-1 rounded-sm border border-amber-400">
               FC
