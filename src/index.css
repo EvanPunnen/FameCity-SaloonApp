@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+  
+  h1, h2, h3, .brand-font {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+
+  .luxury-serif {
+    font-family: 'Cinzel', serif;
+  }
+}
+
+/* Custom scrollbars for tablet touch and modern browsers */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Blue & White Accents for Fame City */
+.bg-blue-gradient {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e40af 100%);
+}
+
+.bg-blue-subtle {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.text-blue-theme {
+  color: #2563eb;
+}
+
+.border-blue-theme {
+  border-color: #3b82f6;
+}
+
+.blue-glow {
+  box-shadow: 0 4px 20px -2px rgba(37, 99, 235, 0.25);
+}
+
+.blue-glow-hover:hover {
+  box-shadow: 0 8px 25px -4px rgba(37, 99, 235, 0.35);
+}
+
+/* Printable Bill / Thermal Receipt */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-receipt, #printable-receipt * {
+    visibility: visible;
+  }
+  #printable-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    margin: 0;
+    padding: 10px;
+    background: white;
+    color: black;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+  }
+}
