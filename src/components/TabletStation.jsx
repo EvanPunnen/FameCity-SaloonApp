@@ -14,10 +14,7 @@ import {
   Layers,
   CheckCircle2,
   Edit2,
-  Palette,
-  Smartphone,
   Zap,
-  Info,
   X,
   User
 } from 'lucide-react';
@@ -34,8 +31,6 @@ export default function TabletStation({
   salonInfo,
   onRecordSale,
   onOpenOwnerDashboard,
-  onOpenThemeModal,
-  onOpenInstallModal,
   onUpdateBarbers
 }) {
   const [selectedBarberForService, setSelectedBarberForService] = useState(null);
@@ -134,26 +129,6 @@ export default function TabletStation({
               <span>⚡ SELECT SERVICES / BILL</span>
             </button>
 
-            {/* Change Theme / Palette Button */}
-            <button
-              onClick={onOpenThemeModal}
-              className="bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-700 font-bold px-3.5 py-2.5 rounded-2xl text-xs flex items-center gap-1.5 transition border border-slate-200 cursor-pointer shadow-2xs"
-              title="Change Color Palette"
-            >
-              <Palette className="w-4 h-4 text-blue-600" />
-              <span>Theme / Colors</span>
-            </button>
-
-            {/* Install APK / PWA Button */}
-            <button
-              onClick={onOpenInstallModal}
-              className="bg-blue-50 hover:bg-blue-100 text-blue-900 font-bold px-3.5 py-2.5 rounded-2xl text-xs flex items-center gap-1.5 transition border border-blue-200 cursor-pointer"
-              title="Install Live APK / PWA"
-            >
-              <Smartphone className="w-4 h-4 text-blue-600" />
-              <span>Install APK</span>
-            </button>
-
             {/* Owner Dashboard Access */}
             <button
               onClick={onOpenOwnerDashboard}
@@ -178,10 +153,6 @@ export default function TabletStation({
             <span className="font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
               {formatCurrency(todayTotalSales, salonInfo.currency)}
             </span>
-          </div>
-          <div className="flex items-center gap-1.5 text-slate-500">
-            <Info className="w-3.5 h-3.5 text-blue-600" />
-            <span>Tap <strong>"+ SELECT SERVICES"</strong> on any stylist below to bill, or <strong>"Edit Stylist"</strong> to update employee info</span>
           </div>
         </div>
       </div>

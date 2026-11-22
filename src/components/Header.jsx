@@ -6,11 +6,7 @@ import {
   Clock,
   Maximize2,
   Minimize2,
-  MapPin,
-  RotateCcw,
-  Sparkles,
-  Palette,
-  Smartphone
+  MapPin
 } from 'lucide-react';
 
 const InstagramIcon = ({ className = "w-4 h-4" }) => (
@@ -32,10 +28,7 @@ const InstagramIcon = ({ className = "w-4 h-4" }) => (
 export default function Header({
   currentView,
   onSwitchView,
-  salonInfo,
-  onResetData,
-  onOpenThemeModal,
-  onOpenInstallModal
+  salonInfo
 }) {
   const [time, setTime] = useState(new Date());
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -75,102 +68,83 @@ export default function Header({
     <header className="bg-white border-b border-slate-200/90 sticky top-0 z-40 shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-2.5 flex items-center justify-between gap-3">
         
-        {/* Brand Left Section */}
-        <div className="flex items-center gap-3">
-          <div className="relative group cursor-pointer" onClick={() => onSwitchView('tablet')}>
-            <img
-              src={logoImg}
-              alt={salonInfo.name}
-              className="w-12 h-12 rounded-full object-cover border-2 border-blue-500 shadow-sm group-hover:scale-105 transition"
-            />
-            <span className="absolute -bottom-1 -right-1 bg-slate-900 text-amber-400 text-[8px] font-black px-1 rounded-sm border border-amber-400">
-              FC
-            </span>
-          </div>
-
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-black text-slate-950 tracking-wider luxury-serif uppercase flex items-center gap-1.5">
-                <span>FAME CITY</span>
-              </h1>
-              <span className="hidden sm:inline-block text-[10px] bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-full border border-amber-300">
-                SALOON POS
-              </span>
-            </div>
-            <p className="text-[10px] font-bold tracking-widest text-amber-700 uppercase">
-              BE YOUR OWN FAME
-            </p>
-          </div>
-        </div>
-
-        {/* Live Clock & Date for Tablet */}
-        <div className="hidden lg:flex items-center gap-3 px-3.5 py-1.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600">
-          <Clock className="w-4 h-4 text-amber-600 animate-spin-slow" />
-          <div className="text-right">
-            <span className="font-extrabold text-slate-900 font-mono text-xs">{formattedTime}</span>
-            <span className="text-slate-400 ml-1.5 font-medium">{formattedDate}</span>
-          </div>
-        </div>
-
-        {/* Right Navigation & Interface Switcher */}
-        <div className="flex items-center gap-2">
-          
-          {/* Interface Switch Pills */}
+        {/* Left Section: View Navigation Switcher */}
+        <div className="flex items-center gap-2 flex-1 justify-start">
           <div className="bg-slate-100 p-1 rounded-2xl flex items-center border border-slate-200">
             <button
               onClick={() => onSwitchView('tablet')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
+              className={`px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
                 currentView === 'tablet'
-                  ? 'bg-white text-slate-900 shadow-xs'
+                  ? 'bg-blue-600 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Scissors className="w-3.5 h-3.5 text-amber-600" />
+              <Scissors className="w-3.5 h-3.5" />
               <span>Tablet Station</span>
             </button>
 
             <button
               onClick={() => onSwitchView('owner')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
+              className={`px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
                 currentView === 'owner'
-                  ? 'bg-slate-900 text-amber-300 shadow-xs'
+                  ? 'bg-slate-900 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Shield className="w-3.5 h-3.5 text-amber-400" />
+              <Shield className="w-3.5 h-3.5 text-blue-400" />
               <span>Owner Dashboard</span>
             </button>
           </div>
+        </div>
 
-          {/* Theme Palette Button */}
-          <button
-            onClick={onOpenThemeModal}
-            title="Modify Salon Color Palette"
-            className="w-9 h-9 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 flex items-center justify-center border border-amber-300 transition cursor-pointer"
-          >
-            <Palette className="w-4 h-4 text-amber-600" />
-          </button>
+        {/* Center Section: Centered Logo & Brand Fitment */}
+        <div
+          className="flex flex-col items-center justify-center cursor-pointer group py-0.5 px-3 shrink-0"
+          onClick={() => onSwitchView('tablet')}
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="relative">
+              <img
+                src={logoImg}
+                alt="Fame City"
+                className="w-12 h-12 rounded-full object-cover border-2 border-blue-600 shadow-sm group-hover:scale-105 transition"
+              />
+              <span className="absolute -bottom-1 -right-1 bg-blue-600 text-white text-[8px] font-black px-1 rounded-sm border border-white">
+                FC
+              </span>
+            </div>
 
-          {/* Install APK / PWA Button */}
-          <button
-            onClick={onOpenInstallModal}
-            title="Install App (APK / PWA)"
-            className="w-9 h-9 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 flex items-center justify-center border border-emerald-300 transition cursor-pointer"
-          >
-            <Smartphone className="w-4 h-4 text-emerald-600" />
-          </button>
+            <div className="text-center sm:text-left">
+              <h1 className="text-base sm:text-lg font-black text-slate-950 tracking-wider luxury-serif uppercase leading-tight">
+                FAME CITY
+              </h1>
+              <p className="text-[9px] font-bold tracking-widest text-blue-600 uppercase">
+                BE YOUR OWN FAME
+              </p>
+            </div>
+          </div>
+        </div>
 
-          {/* Social / External Links */}
-          <div className="hidden md:flex items-center gap-1 pl-1">
+        {/* Right Section: Clock & Fullscreen */}
+        <div className="flex items-center gap-2 flex-1 justify-end">
+          {/* Live Clock & Date */}
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600">
+            <Clock className="w-3.5 h-3.5 text-blue-600" />
+            <span className="font-extrabold text-slate-900 font-mono text-xs">{formattedTime}</span>
+            <span className="text-slate-400 hidden xl:inline font-medium">• {formattedDate}</span>
+          </div>
+
+          {/* Social Links */}
+          <div className="hidden sm:flex items-center gap-1">
             {salonInfo.mapsUrl && (
               <a
                 href={salonInfo.mapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Google Maps Location"
-                className="w-9 h-9 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center justify-center border border-slate-200 transition"
+                className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center justify-center border border-slate-200 transition"
               >
-                <MapPin className="w-4 h-4 text-rose-500" />
+                <MapPin className="w-3.5 h-3.5 text-rose-500" />
               </a>
             )}
             {salonInfo.instagram && (
@@ -179,9 +153,9 @@ export default function Header({
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Instagram Page"
-                className="w-9 h-9 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center justify-center border border-slate-200 transition"
+                className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center justify-center border border-slate-200 transition"
               >
-                <InstagramIcon className="w-4 h-4 text-pink-600" />
+                <InstagramIcon className="w-3.5 h-3.5 text-pink-600" />
               </a>
             )}
           </div>
@@ -190,9 +164,9 @@ export default function Header({
           <button
             onClick={toggleFullscreen}
             title={isFullscreen ? 'Exit Fullscreen' : 'Tablet Kiosk Fullscreen'}
-            className="w-9 h-9 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center justify-center border border-slate-200 transition"
+            className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center justify-center border border-slate-200 transition cursor-pointer"
           >
-            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
           </button>
         </div>
 

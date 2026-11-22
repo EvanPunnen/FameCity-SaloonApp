@@ -51,8 +51,6 @@ export default function OwnerDashboard({
   onUpdateSalonInfo,
   onDeleteTransaction,
   onBackToTablet,
-  onOpenThemeModal,
-  onOpenInstallModal,
   initialTab = 'overview'
 }) {
   // Navigation tabs in Owner Dashboard

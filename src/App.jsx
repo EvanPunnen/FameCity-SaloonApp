@@ -4,8 +4,6 @@ import TabletStation from './components/TabletStation';
 import OwnerDashboard from './components/OwnerDashboard';
 import PinModal from './components/PinModal';
 import ReceiptModal from './components/ReceiptModal';
-import ThemeModal from './components/ThemeModal';
-import InstallApkModal from './components/InstallApkModal';
 import {
   INITIAL_BARBERS,
   INITIAL_SERVICES,
@@ -57,8 +55,6 @@ export default function App() {
   const [pendingActionAfterPin, setPendingActionAfterPin] = useState(null);
 
   // Modals state
-  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
-  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
   const [lastCompletedTxn, setLastCompletedTxn] = useState(null);
 
   // Sync to localStorage
@@ -146,9 +142,6 @@ export default function App() {
         currentView={currentView}
         onSwitchView={handleSwitchView}
         salonInfo={salonInfo}
-        onResetData={handleResetData}
-        onOpenThemeModal={() => setIsThemeModalOpen(true)}
-        onOpenInstallModal={() => setIsInstallModalOpen(true)}
       />
 
       {/* Main Body */}
@@ -162,8 +155,6 @@ export default function App() {
             salonInfo={salonInfo}
             onRecordSale={handleRecordSale}
             onOpenOwnerDashboard={() => handleSwitchView('owner')}
-            onOpenThemeModal={() => setIsThemeModalOpen(true)}
-            onOpenInstallModal={() => setIsInstallModalOpen(true)}
             onUpdateBarbers={setBarbers}
           />
         ) : (
@@ -178,26 +169,9 @@ export default function App() {
             onUpdateSalonInfo={setSalonInfo}
             onDeleteTransaction={handleDeleteTransaction}
             onBackToTablet={() => setCurrentView('tablet')}
-            onOpenThemeModal={() => setIsThemeModalOpen(true)}
-            onOpenInstallModal={() => setIsInstallModalOpen(true)}
           />
         )}
       </main>
-
-      {/* Color Palette Theme Modal */}
-      <ThemeModal
-        isOpen={isThemeModalOpen}
-        onClose={() => setIsThemeModalOpen(false)}
-        currentTheme={currentTheme}
-        onSelectTheme={(theme) => setCurrentTheme(theme)}
-      />
-
-      {/* Install APK / PWA Modal */}
-      <InstallApkModal
-        isOpen={isInstallModalOpen}
-        onClose={() => setIsInstallModalOpen(false)}
-        salonInfo={salonInfo}
-      />
 
       {/* Owner Security PIN Keypad Modal */}
       <PinModal
