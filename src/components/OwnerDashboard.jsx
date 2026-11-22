@@ -78,7 +78,8 @@ export default function OwnerDashboard({
     role: 'Senior Stylist',
     photo: AVATAR_PRESETS[0].url,
     phone: '',
-    commissionRate: 30
+    isOnLeave: false,
+    leaveReason: ''
   });
 
   // Add / Edit Service State
@@ -140,7 +141,25 @@ export default function OwnerDashboard({
     });
   }, [transactions, dateFilter, todayStr, yesterdayStr, customStartDate, customEndDate]);
 
-  // Executive Metrics
+  // Helper for attendance / leave toggle
+  const handleToggleLeave = (barberId) => {
+    onUpdateBarbers(
+      barbers.map((b) =>
+        b.id === barberId
+          ? {
+              ...b,
+              isOnLeave: !b.isOnLeave,
+              leaveReason: !b.isOnLeave ? (b.leaveReason || 'On Leave Today') : ''
+            }
+          : b
+      )
+    );
+  };
+
+  const onDutyCount = useMemo(() => barbers.filter((b) => !b.isOnLeave).length, [barbers]);
+  const onLeaveCount = useMemo(() => barbers.filter((b) => b.isOnLeave).length, [barbers]);
+
+  // Executive Metrics for active filter
   const totalGrossSales = useMemo(() => {
     return filteredTransactions.reduce((acc, t) => acc + (t.finalAmount || 0), 0);
   }, [filteredTransactions]);
@@ -155,17 +174,203 @@ export default function OwnerDashboard({
   const totalClientsCount = filteredTransactions.length;
   const avgTicketValue = totalClientsCount > 0 ? Math.round(totalGrossSales / totalClientsCount) : 0;
 
-  // Monthly Sales Total
-  const monthlyTotalSales = useMemo(() => {
+  // Specific Today Metrics
+  const todayTransactions = useMemo(() => {
+    return transactions.filter((t) => t.date === todayStr);
+  }, [transactions, todayStr]);
+
+  const todayGrossSales = useMemo(() => {
+    return todayTransactions.reduce((acc, t) => acc + (t.finalAmount || 0), 0);
+  }, [todayTransactions]);
+
+  const todayCutsCount = useMemo(() => {
+    return todayTransactions.reduce(
+      (acc, t) => acc + t.services.reduce((sAcc, s) => sAcc + (s.quantity || 1), 0),
+      0
+    );
+  }, [todayTransactions]);
+
+  const todayBillsCount = todayTransactions.length;
+  const todayAvgTicket = todayBillsCount > 0 ? Math.round(todayGrossSales / todayBillsCount) : 0;
+
+  // Specific Yesterday Metrics for comparison
+  const yesterdayTransactions = useMemo(() => {
+    return transactions.filter((t) => t.date === yesterdayStr);
+  }, [transactions, yesterdayStr]);
+
+  const yesterdayGrossSales = useMemo(() => {
+    return yesterdayTransactions.reduce((acc, t) => acc + (t.finalAmount || 0), 0);
+  }, [yesterdayTransactions]);
+
+  // Specific Current Month Metrics
+  const currentMonthTransactions = useMemo(() => {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth();
-    return transactions
-      .filter((t) => {
-        const d = new Date(t.date);
-        return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+    return transactions.filter((t) => {
+      const d = new Date(t.date);
+      return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+    });
+  }, [transactions]);
+
+  // Monthly Sales Total
+  const monthlyTotalSales = useMemo(() => {
+    return currentMonthTransactions.reduce((acc, t) => acc + (t.finalAmount || 0), 0);
+  }, [currentMonthTransactions]);
+
+  const monthlyTotalCuts = useMemo(() => {
+    return currentMonthTransactions.reduce(
+      (acc, t) => acc + t.services.reduce((sAcc, s) => sAcc + (s.quantity || 1), 0),
+      0
+    );
+  }, [currentMonthTransactions]);
+
+  const monthlyTotalBills = currentMonthTransactions.length;
+  const monthlyAvgTicket = monthlyTotalBills > 0 ? Math.round(monthlyTotalSales / monthlyTotalBills) : 0;
+  const daysInCurrentMonthSoFar = Math.max(new Date().getDate(), 1);
+  const monthlyAvgDailySales = Math.round(monthlyTotalSales / daysInCurrentMonthSoFar);
+
+  // Comprehensive Per-Barber Breakdown (Today, Month & All-Time)
+  const perBarberMatrix = useMemo(() => {
+    return barbers.map((b) => {
+      // Today stats
+      const bTodayTxns = todayTransactions.filter((t) => t.barberId === b.id);
+      const todayRevenue = bTodayTxns.reduce((acc, t) => acc + (t.finalAmount || 0), 0);
+      const todayCuts = bTodayTxns.reduce(
+        (acc, t) => acc + t.services.reduce((sAcc, s) => sAcc + (s.quantity || 1), 0),
+        0
+      );
+      const todayBills = bTodayTxns.length;
+
+      // Month stats
+      const bMonthTxns = currentMonthTransactions.filter((t) => t.barberId === b.id);
+      const monthRevenue = bMonthTxns.reduce((acc, t) => acc + (t.finalAmount || 0), 0);
+      const monthCuts = bMonthTxns.reduce(
+        (acc, t) => acc + t.services.reduce((sAcc, s) => sAcc + (s.quantity || 1), 0),
+        0
+      );
+      const monthBills = bMonthTxns.length;
+
+      // Filtered period stats
+      const bFilteredTxns = filteredTransactions.filter((t) => t.barberId === b.id);
+      const periodRevenue = bFilteredTxns.reduce((acc, t) => acc + (t.finalAmount || 0), 0);
+      const periodCuts = bFilteredTxns.reduce(
+        (acc, t) => acc + t.services.reduce((sAcc, s) => sAcc + (s.quantity || 1), 0),
+        0
+      );
+      const periodBills = bFilteredTxns.length;
+
+      const avgTicket = periodBills > 0 ? Math.round(periodRevenue / periodBills) : 0;
+      const shareOfTotal = totalGrossSales > 0 ? Math.round((periodRevenue / totalGrossSales) * 100) : 0;
+
+      // Top service
+      const topSrvMap = {};
+      bFilteredTxns.forEach((t) => {
+        t.services.forEach((s) => {
+          topSrvMap[s.name] = (topSrvMap[s.name] || 0) + (s.quantity || 1);
+        });
+      });
+
+      return {
+        ...b,
+        todayRevenue,
+        todayCuts,
+        todayBills,
+        monthRevenue,
+        monthCuts,
+        monthBills,
+        periodRevenue,
+        periodCuts,
+        periodBills,
+        avgTicket,
+        shareOfTotal,
+        topServices: topSrvMap
+      };
+    }).sort((a, b) => b.todayRevenue - a.todayRevenue || b.monthRevenue - a.monthRevenue);
+  }, [barbers, todayTransactions, currentMonthTransactions, filteredTransactions, totalGrossSales]);
+
+  // Top Barber Today
+  const topBarberToday = useMemo(() => {
+    return perBarberMatrix[0] || null;
+  }, [perBarberMatrix]);
+
+  // Day-by-Day Historical Sales Log
+  const dayByDayHistory = useMemo(() => {
+    const dayMap = {};
+    transactions.forEach((t) => {
+      if (!dayMap[t.date]) {
+        dayMap[t.date] = {
+          date: t.date,
+          revenue: 0,
+          cuts: 0,
+          bills: 0,
+          barberSales: {},
+          paymentSplit: { UPI: 0, CASH: 0, CARD: 0 }
+        };
+      }
+      dayMap[t.date].revenue += t.finalAmount || 0;
+      dayMap[t.date].cuts += t.services.reduce((acc, s) => acc + (s.quantity || 1), 0);
+      dayMap[t.date].bills += 1;
+      dayMap[t.date].barberSales[t.barberName] = (dayMap[t.date].barberSales[t.barberName] || 0) + (t.finalAmount || 0);
+      const method = t.paymentMethod || 'CASH';
+      dayMap[t.date].paymentSplit[method] = (dayMap[t.date].paymentSplit[method] || 0) + (t.finalAmount || 0);
+    });
+
+    return Object.values(dayMap)
+      .map((day) => {
+        let topName = '—';
+        let topAmount = 0;
+        Object.entries(day.barberSales).forEach(([name, amt]) => {
+          if (amt > topAmount) {
+            topAmount = amt;
+            topName = name;
+          }
+        });
+        return {
+          ...day,
+          topBarberName: topName,
+          topBarberAmount: topAmount,
+          avgTicket: day.bills > 0 ? Math.round(day.revenue / day.bills) : 0
+        };
       })
-      .reduce((acc, t) => acc + (t.finalAmount || 0), 0);
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }, [transactions]);
+
+  // Month-by-Month History
+  const monthByMonthHistory = useMemo(() => {
+    const monthMap = {};
+    transactions.forEach((t) => {
+      const monthKey = t.date.substring(0, 7); // 'YYYY-MM'
+      if (!monthMap[monthKey]) {
+        monthMap[monthKey] = {
+          monthKey,
+          revenue: 0,
+          cuts: 0,
+          bills: 0,
+          uniqueDates: new Set()
+        };
+      }
+      monthMap[monthKey].revenue += t.finalAmount || 0;
+      monthMap[monthKey].cuts += t.services.reduce((acc, s) => acc + (s.quantity || 1), 0);
+      monthMap[monthKey].bills += 1;
+      monthMap[monthKey].uniqueDates.add(t.date);
+    });
+
+    return Object.values(monthMap)
+      .map((m) => {
+        const [year, month] = m.monthKey.split('-');
+        const dateObj = new Date(Number(year), Number(month) - 1, 1);
+        const monthLabel = dateObj.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+        const activeDays = m.uniqueDates.size;
+        return {
+          ...m,
+          monthLabel,
+          activeDays,
+          avgPerDay: activeDays > 0 ? Math.round(m.revenue / activeDays) : 0,
+          avgTicket: m.bills > 0 ? Math.round(m.revenue / m.bills) : 0
+        };
+      })
+      .sort((a, b) => b.monthKey.localeCompare(a.monthKey));
   }, [transactions]);
 
   // Payment Breakdown
@@ -188,36 +393,17 @@ export default function OwnerDashboard({
     return summary;
   }, [filteredTransactions]);
 
-  // Barber Performance Matrix
+  // Barber Performance for Active Filter
   const barberPerformance = useMemo(() => {
-    const map = {};
-    barbers.forEach((b) => {
-      map[b.id] = {
-        ...b,
-        cuts: 0,
-        tickets: 0,
-        revenue: 0,
-        topServices: {}
-      };
-    });
+    return perBarberMatrix.map((b) => ({
+      ...b,
+      cuts: b.periodCuts,
+      tickets: b.periodBills,
+      revenue: b.periodRevenue
+    })).sort((a, b) => b.revenue - a.revenue);
+  }, [perBarberMatrix]);
 
-    filteredTransactions.forEach((t) => {
-      if (map[t.barberId]) {
-        const itemCuts = t.services.reduce((acc, s) => acc + (s.quantity || 1), 0);
-        map[t.barberId].cuts += itemCuts;
-        map[t.barberId].tickets += 1;
-        map[t.barberId].revenue += t.finalAmount || 0;
-
-        t.services.forEach((s) => {
-          map[t.barberId].topServices[s.name] = (map[t.barberId].topServices[s.name] || 0) + (s.quantity || 1);
-        });
-      }
-    });
-
-    return Object.values(map).sort((a, b) => b.revenue - a.revenue);
-  }, [barbers, filteredTransactions]);
-
-  // Daily Trend Data
+  // Daily Trend Data for Active Filter
   const dailyTrends = useMemo(() => {
     const dayMap = {};
     filteredTransactions.forEach((t) => {
@@ -274,6 +460,8 @@ export default function OwnerDashboard({
       ...newBarber,
       id: `fc-${Date.now()}`,
       status: 'active',
+      isOnLeave: Boolean(newBarber.isOnLeave),
+      leaveReason: newBarber.leaveReason || '',
       joinedDate: todayStr
     };
     onUpdateBarbers([...barbers, created]);
@@ -284,7 +472,8 @@ export default function OwnerDashboard({
       role: 'Senior Stylist',
       photo: AVATAR_PRESETS[0].url,
       phone: '',
-      commissionRate: 30
+      isOnLeave: false,
+      leaveReason: ''
     });
   };
 
@@ -510,33 +699,38 @@ export default function OwnerDashboard({
         {activeTab === 'overview' && (
           <div className="space-y-6">
             
-            {/* Top 4 Key Metric Cards in Blue & White */}
+            {/* Top 4 Key Metric Cards: Daily Sales, Monthly Sales, Top Barber, Attendance */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               
-              {/* Card 1: Gross Sales */}
+              {/* Card 1: Today's Daily Sales */}
               <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs relative overflow-hidden">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold uppercase text-slate-500 tracking-wider">
-                    Total Sales ({dateFilter})
+                    Today's Daily Sales
                   </span>
                   <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
                     <TrendingUp className="w-5 h-5" />
                   </div>
                 </div>
                 <div className="text-3xl font-black text-slate-900 tracking-tight">
-                  {formatCurrency(totalGrossSales, salonInfo.currency)}
+                  {formatCurrency(todayGrossSales, salonInfo.currency)}
                 </div>
-                <div className="mt-2 text-xs text-emerald-600 font-semibold flex items-center gap-1">
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                  <span>Real-time revenue flow</span>
+                <div className="mt-2 text-xs text-slate-500 flex items-center justify-between">
+                  <span>✂️ <strong>{todayCutsCount}</strong> cuts • <strong>{todayBillsCount}</strong> bills</span>
+                  <span className="text-emerald-600 font-semibold text-[11px]">Avg {formatCurrency(todayAvgTicket, salonInfo.currency)}</span>
                 </div>
+                {yesterdayGrossSales > 0 && (
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Yesterday: {formatCurrency(yesterdayGrossSales, salonInfo.currency)}
+                  </p>
+                )}
               </div>
 
-              {/* Card 2: Monthly Total */}
+              {/* Card 2: Monthly Total Sales */}
               <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs relative overflow-hidden">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold uppercase text-slate-500 tracking-wider">
-                    Month-to-Date Total
+                    This Month's Sales
                   </span>
                   <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
                     <Calendar className="w-5 h-5" />
@@ -545,52 +739,345 @@ export default function OwnerDashboard({
                 <div className="text-3xl font-black text-blue-600 tracking-tight">
                   {formatCurrency(monthlyTotalSales, salonInfo.currency)}
                 </div>
-                <p className="mt-2 text-xs text-slate-400">
-                  Current calendar month sales
-                </p>
+                <div className="mt-2 text-xs text-slate-500 flex items-center justify-between">
+                  <span>✂️ <strong>{monthlyTotalCuts}</strong> cuts • <strong>{monthlyTotalBills}</strong> visits</span>
+                  <span className="text-blue-600 font-semibold text-[11px]">~{formatCurrency(monthlyAvgDailySales, salonInfo.currency)}/day</span>
+                </div>
               </div>
 
-              {/* Card 3: Cuts / Customers */}
+              {/* Card 3: Top Stylist Today */}
               <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs relative overflow-hidden">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold uppercase text-slate-500 tracking-wider">
-                    Cuts & Services
+                    Top Stylist Today
                   </span>
-                  <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-                    <Scissors className="w-5 h-5" />
+                  <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+                    <Award className="w-5 h-5" />
                   </div>
                 </div>
-                <div className="text-3xl font-black text-slate-900 tracking-tight">
-                  {totalCutsCount} <span className="text-sm font-bold text-slate-400">cuts</span>
+                <div className="text-2xl font-black text-slate-900 tracking-tight truncate">
+                  {topBarberToday ? topBarberToday.name : '—'}
                 </div>
                 <div className="mt-2 text-xs text-slate-500">
-                  Across <strong>{totalClientsCount}</strong> customers (Avg {formatCurrency(avgTicketValue, salonInfo.currency)})
+                  {topBarberToday && topBarberToday.todayRevenue > 0 ? (
+                    <span className="text-emerald-600 font-bold">
+                      {formatCurrency(topBarberToday.todayRevenue, salonInfo.currency)} ({topBarberToday.todayCuts} cuts)
+                    </span>
+                  ) : (
+                    <span>Ready for first customer today</span>
+                  )}
                 </div>
               </div>
 
-              {/* Card 4: Avg Spend per Customer */}
-              <div className="bg-white p-5 rounded-3xl border border-emerald-200 shadow-xs relative overflow-hidden bg-gradient-to-br from-white to-emerald-50/30">
+              {/* Card 4: Staff Attendance & Leave */}
+              <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs relative overflow-hidden">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold uppercase text-emerald-800 tracking-wider">
-                    Avg Ticket Size
+                  <span className="text-xs font-bold uppercase text-slate-500 tracking-wider">
+                    Staff Attendance Today
                   </span>
-                  <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
-                    <DollarSign className="w-5 h-5" />
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                    <Users className="w-5 h-5" />
                   </div>
                 </div>
-                <div className="text-3xl font-black text-emerald-600 tracking-tight">
-                  {formatCurrency(avgTicketValue, salonInfo.currency)}
+                <div className="text-3xl font-black text-slate-900 tracking-tight">
+                  <span className="text-emerald-600">{onDutyCount}</span>
+                  <span className="text-slate-400 text-xl font-bold"> / {barbers.length}</span>
                 </div>
-                <div className="mt-2 text-xs text-slate-500">
-                  Average spend across <strong>{totalClientsCount}</strong> customer visits
+                <div className="mt-2 text-xs">
+                  {onLeaveCount > 0 ? (
+                    <span className="text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200 inline-block">
+                      🌴 {onLeaveCount} Stylist{onLeaveCount > 1 ? 's' : ''} on leave today
+                    </span>
+                  ) : (
+                    <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block">
+                      🟢 Full attendance (all on duty)
+                    </span>
+                  )}
                 </div>
               </div>
 
             </div>
 
-            {/* Middle Section: Payment Breakdown & Top Barbers */}
+            {/* SECTION 1: PER BARBER SALES MATRIX (Today & Month-to-Date) */}
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                    <span>💈 Per Barber Sales & Attendance Breakdown</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Live breakdown of sales generated per barber (Daily, Monthly & Attendance Status)
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-800 rounded-full border border-emerald-200 font-bold">
+                    🟢 {onDutyCount} On Duty
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-800 rounded-full border border-amber-200 font-bold">
+                    🌴 {onLeaveCount} On Leave
+                  </span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <tr>
+                      <th className="py-3.5 px-4">Barber / Stylist</th>
+                      <th className="py-3.5 px-3 text-center">Today's Attendance</th>
+                      <th className="py-3.5 px-4 text-right">Today's Sales</th>
+                      <th className="py-3.5 px-4 text-right">This Month's Sales</th>
+                      <th className="py-3.5 px-3 text-center">Month Cuts</th>
+                      <th className="py-3.5 px-4 text-right">Avg / Client</th>
+                      <th className="py-3.5 px-3 text-center">Salon Share</th>
+                      <th className="py-3.5 px-4 text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {perBarberMatrix.map((b, idx) => (
+                      <tr key={b.id} className="hover:bg-blue-50/20 transition">
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-3">
+                            <span className="font-bold text-xs text-slate-400 w-4">
+                              {idx + 1}
+                            </span>
+                            <img
+                              src={b.photo}
+                              alt={b.name}
+                              className={`w-10 h-10 rounded-xl object-cover border-2 ${
+                                b.isOnLeave ? 'border-amber-400 opacity-80' : 'border-blue-400'
+                              }`}
+                            />
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-bold text-slate-900 text-sm">{b.name}</h4>
+                                <span className="bg-blue-100 text-blue-800 text-[10px] font-mono font-bold px-1.5 py-0.2 rounded">
+                                  {b.badgeId}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500">{b.role}</p>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Attendance Toggle Pill */}
+                        <td className="py-3.5 px-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleLeave(b.id)}
+                            className={`px-2.5 py-1 rounded-full text-xs font-bold border transition cursor-pointer ${
+                              b.isOnLeave
+                                ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200'
+                                : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                            }`}
+                            title="Click to toggle on duty / on leave"
+                          >
+                            <span>{b.isOnLeave ? '🌴 On Leave' : '🟢 On Duty'}</span>
+                          </button>
+                          {b.isOnLeave && b.leaveReason && (
+                            <p className="text-[10px] text-amber-700 mt-0.5 truncate max-w-[100px] mx-auto">
+                              {b.leaveReason}
+                            </p>
+                          )}
+                        </td>
+
+                        {/* Today's Sales */}
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="font-black text-slate-900 text-sm">
+                            {formatCurrency(b.todayRevenue, salonInfo.currency)}
+                          </div>
+                          <div className="text-[10px] text-slate-500 font-medium">
+                            {b.todayCuts} cuts today
+                          </div>
+                        </td>
+
+                        {/* This Month's Sales */}
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="font-black text-blue-600 text-sm">
+                            {formatCurrency(b.monthRevenue, salonInfo.currency)}
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            {b.monthBills} clients
+                          </div>
+                        </td>
+
+                        {/* Month Cuts */}
+                        <td className="py-3.5 px-3 text-center font-bold text-slate-700 text-xs">
+                          <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-900 border border-blue-200">
+                            ✂️ {b.monthCuts}
+                          </span>
+                        </td>
+
+                        {/* Avg / Client */}
+                        <td className="py-3.5 px-4 text-right font-semibold text-slate-700 text-xs">
+                          {formatCurrency(b.avgTicket, salonInfo.currency)}
+                        </td>
+
+                        {/* Share of Total */}
+                        <td className="py-3.5 px-3 text-center">
+                          <span className="font-bold text-xs text-slate-800 bg-slate-100 px-2 py-0.5 rounded">
+                            {b.shareOfTotal}%
+                          </span>
+                        </td>
+
+                        {/* Action */}
+                        <td className="py-3.5 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => {
+                                setEditingBarber({ ...b });
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-900 font-bold text-xs flex items-center gap-1 border border-blue-200 transition cursor-pointer"
+                              title="Edit Barber"
+                            >
+                              <Edit2 className="w-3 h-3 text-blue-600" />
+                              <span>Edit</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* SECTION 2: DAILY SALES LOG (Day-by-Day Historical Log) */}
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                    <span>📅 Daily Sales Breakdown & History</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Day-by-day revenue, cuts, customers, and top stylist performance
+                  </p>
+                </div>
+                <span className="text-xs font-semibold text-slate-500">
+                  Last <strong>{dayByDayHistory.length}</strong> active sales days
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <tr>
+                      <th className="py-3 px-4">Date</th>
+                      <th className="py-3 px-4 text-right">Daily Revenue</th>
+                      <th className="py-3 px-3 text-center">Cuts & Services</th>
+                      <th className="py-3 px-3 text-center">Bills</th>
+                      <th className="py-3 px-4 text-right">Avg / Client</th>
+                      <th className="py-3 px-4 text-left">Top Barber of Day</th>
+                      <th className="py-3 px-4 text-right">UPI / Online</th>
+                      <th className="py-3 px-4 text-right">Cash</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {dayByDayHistory.slice(0, 10).map((day) => {
+                      const isToday = day.date === todayStr;
+                      const isYesterday = day.date === yesterdayStr;
+                      return (
+                        <tr
+                          key={day.date}
+                          className={`transition ${
+                            isToday ? 'bg-blue-50/40 font-semibold' : 'hover:bg-slate-50/70'
+                          }`}
+                        >
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-slate-900 text-xs">
+                                {formatDate(day.date)}
+                              </span>
+                              {isToday && (
+                                <span className="bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded uppercase">
+                                  Today
+                                </span>
+                              )}
+                              {isYesterday && (
+                                <span className="bg-slate-200 text-slate-700 text-[9px] font-bold px-1.5 py-0.2 rounded uppercase">
+                                  Yesterday
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-4 text-right font-black text-slate-900 text-sm">
+                            {formatCurrency(day.revenue, salonInfo.currency)}
+                          </td>
+
+                          <td className="py-3 px-3 text-center font-bold text-slate-700 text-xs">
+                            ✂️ {day.cuts}
+                          </td>
+
+                          <td className="py-3 px-3 text-center text-slate-600 text-xs">
+                            {day.bills} clients
+                          </td>
+
+                          <td className="py-3 px-4 text-right font-semibold text-slate-700 text-xs">
+                            {formatCurrency(day.avgTicket, salonInfo.currency)}
+                          </td>
+
+                          <td className="py-3 px-4 text-left text-xs font-medium text-slate-800">
+                            {day.topBarberName !== '—' ? (
+                              <span>
+                                🌟 <strong>{day.topBarberName}</strong> ({formatCurrency(day.topBarberAmount, salonInfo.currency)})
+                              </span>
+                            ) : (
+                              <span className="text-slate-400">—</span>
+                            )}
+                          </td>
+
+                          <td className="py-3 px-4 text-right text-xs font-semibold text-blue-600">
+                            {formatCurrency(day.paymentSplit?.UPI || 0, salonInfo.currency)}
+                          </td>
+
+                          <td className="py-3 px-4 text-right text-xs font-semibold text-emerald-600">
+                            {formatCurrency(day.paymentSplit?.CASH || 0, salonInfo.currency)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* SECTION 3: MONTHLY SALES OVERVIEW & TRENDS */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
+              {/* Month-by-Month Historical Summary Cards */}
+              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="font-extrabold text-slate-900 text-base">Monthly Sales History</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">Month-by-month performance</p>
+                  </div>
+                  <span className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <Calendar className="w-4 h-4" />
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {monthByMonthHistory.map((m) => (
+                    <div
+                      key={m.monthKey}
+                      className="p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-blue-200 transition"
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="font-extrabold text-slate-900 text-sm">{m.monthLabel}</span>
+                        <span className="font-black text-blue-600 text-base">
+                          {formatCurrency(m.revenue, salonInfo.currency)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-slate-500">
+                        <span>✂️ {m.cuts} cuts across {m.bills} clients</span>
+                        <span className="font-semibold text-slate-700">Avg {formatCurrency(m.avgPerDay, salonInfo.currency)}/day</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Payment Method Breakdown */}
               <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
                 <div className="flex items-center justify-between mb-5">
@@ -637,120 +1124,60 @@ export default function OwnerDashboard({
                 </div>
               </div>
 
-              {/* Barber Performance Preview */}
-              <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
-                <div className="flex items-center justify-between mb-5">
-                  <div>
-                    <h3 className="font-extrabold text-slate-900 text-base">
-                      Barber Performance Ranking
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Service counts and revenue generated by each stylist
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setActiveTab('barbers')}
-                    className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>Full Matrix & Edit</span>
-                    <ArrowUpRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  {barberPerformance.slice(0, 5).map((barber, index) => {
-                    const rankMedal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`;
-                    return (
-                      <div
-                        key={barber.id}
-                        className="p-3.5 rounded-2xl bg-slate-50 hover:bg-blue-50/40 border border-slate-100 transition flex items-center justify-between gap-4"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="font-bold text-base w-6 text-center">{rankMedal}</span>
-                          <img
-                            src={barber.photo}
-                            alt={barber.name}
-                            className="w-12 h-12 rounded-xl object-cover border border-blue-300"
-                          />
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-bold text-sm text-slate-900">{barber.name}</h4>
-                              <span className="bg-blue-100 text-blue-800 text-[10px] font-mono px-1.5 py-0.2 rounded font-bold">
-                                {barber.badgeId}
-                              </span>
-                            </div>
-                            <p className="text-xs text-slate-500">
-                              <strong className="text-slate-800">{barber.cuts} cuts</strong> • {barber.tickets} clients
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="text-right">
-                          <div className="font-black text-slate-900 text-base">
-                            {formatCurrency(barber.revenue, salonInfo.currency)}
-                          </div>
-                          <p className="text-[11px] text-blue-600 font-semibold">
-                            {barber.cuts} services done
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-            </div>
-
-            {/* Daily Trend Visual Chart */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
-              <div className="flex items-center justify-between mb-6">
+              {/* Daily Trend Visual Chart */}
+              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col justify-between">
                 <div>
-                  <h3 className="font-extrabold text-slate-900 text-base">Daily Revenue Trend</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Sales performance by day across the chosen date period
-                  </p>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="font-extrabold text-slate-900 text-base">Daily Revenue Trend</h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Peak Day: <strong>{formatCurrency(maxDailyRevenue, salonInfo.currency)}</strong>
+                      </p>
+                    </div>
+                  </div>
+
+                  {dailyTrends.length === 0 ? (
+                    <div className="py-12 text-center text-slate-400 text-sm">
+                      No trend data available.
+                    </div>
+                  ) : (
+                    <div className="h-44 flex items-end gap-1.5 pt-6 pb-2 border-b border-slate-100 overflow-x-auto">
+                      {dailyTrends.slice(-14).map((d) => {
+                        const heightPercent = Math.max(8, Math.round((d.revenue / maxDailyRevenue) * 100));
+                        const isToday = d.date === todayStr;
+                        return (
+                          <div
+                            key={d.date}
+                            className="flex-1 min-w-[28px] flex flex-col items-center gap-1 group relative h-full justify-end"
+                          >
+                            <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-[10px] py-1 px-2 rounded-md pointer-events-none whitespace-nowrap z-20 shadow-md">
+                              {formatDate(d.date)}: {formatCurrency(d.revenue, salonInfo.currency)}
+                            </div>
+
+                            <div
+                              className={`w-full rounded-t-lg transition-all duration-300 ${
+                                isToday
+                                  ? 'bg-blue-600 group-hover:bg-blue-700'
+                                  : 'bg-slate-800 group-hover:bg-slate-700'
+                              }`}
+                              style={{ height: `${heightPercent}%` }}
+                            />
+                            <span className="text-[9px] text-slate-400 font-mono rotate-[-45deg] origin-top-left mt-2 block whitespace-nowrap">
+                              {d.date.slice(5)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-                <div className="text-xs text-slate-500">
-                  Peak Day: <strong>{formatCurrency(maxDailyRevenue, salonInfo.currency)}</strong>
+
+                <div className="pt-3 text-[11px] text-slate-400 flex items-center justify-between">
+                  <span>Blue: Today's live flow</span>
+                  <span>Slate: Past days</span>
                 </div>
               </div>
 
-              {dailyTrends.length === 0 ? (
-                <div className="py-12 text-center text-slate-400 text-sm">
-                  No trend data available for this timeframe.
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="h-48 flex items-end gap-2 pt-6 pb-2 border-b border-slate-100 overflow-x-auto">
-                    {dailyTrends.map((d) => {
-                      const heightPercent = Math.max(8, Math.round((d.revenue / maxDailyRevenue) * 100));
-                      const isToday = d.date === todayStr;
-                      return (
-                        <div
-                          key={d.date}
-                          className="flex-1 min-w-[36px] flex flex-col items-center gap-1 group relative h-full justify-end"
-                        >
-                          <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-[10px] py-1 px-2 rounded-md pointer-events-none whitespace-nowrap z-20 shadow-md">
-                            {formatDate(d.date)}: {formatCurrency(d.revenue, salonInfo.currency)} ({d.cuts} cuts)
-                          </div>
-
-                          <div
-                            className={`w-full rounded-t-lg transition-all duration-300 ${
-                              isToday
-                                ? 'bg-blue-600 group-hover:bg-blue-700'
-                                : 'bg-slate-800 group-hover:bg-slate-700'
-                            }`}
-                            style={{ height: `${heightPercent}%` }}
-                          />
-                          <span className="text-[10px] text-slate-400 font-mono rotate-[-45deg] origin-top-left mt-2 block whitespace-nowrap">
-                            {d.date.slice(5)}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
 
           </div>
@@ -765,7 +1192,7 @@ export default function OwnerDashboard({
                   Manage Barbers & Performance
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Click <strong>"Edit"</strong> on any stylist card to update their name, avatar, badge ID, or role
+                  Click <strong>"Edit"</strong> on any stylist card to update their details or mark leave
                 </p>
               </div>
 
@@ -778,6 +1205,26 @@ export default function OwnerDashboard({
               </button>
             </div>
 
+            {/* Attendance & Leave Quick Overview Banner */}
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs shadow-2xs">
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-slate-800">Staff Attendance Today:</span>
+                <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 font-extrabold border border-emerald-200">
+                  🟢 {onDutyCount} Stylists On Duty
+                </span>
+                <span className={`px-3 py-1 rounded-full font-extrabold border ${
+                  onLeaveCount > 0
+                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                    : 'bg-slate-50 text-slate-500 border-slate-200'
+                }`}>
+                  🌴 {onLeaveCount} Stylists On Leave
+                </span>
+              </div>
+              <span className="text-slate-400">
+                Tap on any stylist's attendance pill to toggle On Duty / On Leave for today
+              </span>
+            </div>
+
             {/* Performance Grid / Table with Direct EDIT button */}
             <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
@@ -785,6 +1232,7 @@ export default function OwnerDashboard({
                   <thead className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
                     <tr>
                       <th className="py-4 px-6">Barber / Stylist</th>
+                      <th className="py-4 px-3 text-center">Today's Attendance</th>
                       <th className="py-4 px-4 text-center">Services Done</th>
                       <th className="py-4 px-4 text-center">Clients</th>
                       <th className="py-4 px-4 text-right">Total Revenue</th>
@@ -803,7 +1251,9 @@ export default function OwnerDashboard({
                             <img
                               src={b.photo}
                               alt={b.name}
-                              className="w-12 h-12 rounded-2xl object-cover border border-blue-400"
+                              className={`w-12 h-12 rounded-2xl object-cover border ${
+                                b.isOnLeave ? 'border-amber-400 opacity-80' : 'border-blue-400'
+                              }`}
                             />
                             <div>
                               <div className="flex items-center gap-2">
@@ -815,6 +1265,27 @@ export default function OwnerDashboard({
                               <p className="text-xs text-slate-500">{b.role} {b.phone ? `• ${b.phone}` : ''}</p>
                             </div>
                           </div>
+                        </td>
+
+                        {/* Today's Attendance Toggle */}
+                        <td className="py-4 px-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleLeave(b.id)}
+                            className={`px-2.5 py-1 rounded-full text-xs font-bold border transition cursor-pointer ${
+                              b.isOnLeave
+                                ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200'
+                                : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                            }`}
+                            title="Click to toggle leave status"
+                          >
+                            <span>{b.isOnLeave ? '🌴 On Leave' : '🟢 On Duty'}</span>
+                          </button>
+                          {b.isOnLeave && b.leaveReason && (
+                            <p className="text-[10px] text-amber-700 mt-0.5 truncate max-w-[90px] mx-auto">
+                              {b.leaveReason}
+                            </p>
+                          )}
                         </td>
 
                         <td className="py-4 px-4 text-center">
@@ -868,7 +1339,7 @@ export default function OwnerDashboard({
                   <div>
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="flex items-center gap-3">
-                        <img src={b.photo} alt={b.name} className="w-14 h-14 rounded-xl object-cover border-2 border-blue-400" />
+                        <img src={b.photo} alt={b.name} className={`w-14 h-14 rounded-xl object-cover border-2 ${b.isOnLeave ? 'border-amber-400 opacity-80' : 'border-blue-400'}`} />
                         <div>
                           <h4 className="font-bold text-slate-900">{b.name}</h4>
                           <span className="text-[10px] bg-blue-100 px-1.5 py-0.5 rounded font-mono font-bold text-blue-800">
@@ -878,13 +1349,26 @@ export default function OwnerDashboard({
                         </div>
                       </div>
 
-                      <button
-                        onClick={() => setEditingBarber({ ...b })}
-                        className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs font-bold rounded-lg border border-blue-200 flex items-center gap-1 transition cursor-pointer"
-                      >
-                        <Edit2 className="w-3 h-3 text-blue-600" />
-                        <span>Edit</span>
-                      </button>
+                      <div className="flex flex-col items-end gap-1">
+                        <button
+                          onClick={() => setEditingBarber({ ...b })}
+                          className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs font-bold rounded-lg border border-blue-200 flex items-center gap-1 transition cursor-pointer"
+                        >
+                          <Edit2 className="w-3 h-3 text-blue-600" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleLeave(b.id)}
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition cursor-pointer ${
+                            b.isOnLeave
+                              ? 'bg-amber-100 text-amber-900 border-amber-300'
+                              : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          }`}
+                        >
+                          {b.isOnLeave ? '🌴 Leave' : '🟢 Duty'}
+                        </button>
+                      </div>
                     </div>
 
                     <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs space-y-1 mb-3">
@@ -896,6 +1380,12 @@ export default function OwnerDashboard({
                         <span className="text-slate-500">Services in Period:</span>
                         <strong className="text-blue-700">{b.cuts} cuts</strong>
                       </div>
+                      {b.isOnLeave && (
+                        <div className="flex justify-between text-amber-800 font-semibold pt-1 border-t border-slate-200">
+                          <span>Leave Status:</span>
+                          <span>{b.leaveReason || 'On Leave Today'}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1339,6 +1829,48 @@ export default function OwnerDashboard({
                 />
               </div>
 
+              {/* Attendance Status */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Today's Attendance Status
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setNewBarber({ ...newBarber, isOnLeave: false })}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                      !newBarber.isOnLeave
+                        ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-2xs'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span>🟢 On Duty / Present</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewBarber({ ...newBarber, isOnLeave: true })}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                      newBarber.isOnLeave
+                        ? 'bg-amber-50 border-amber-500 text-amber-800 shadow-2xs'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                    <span>🌴 On Leave Today</span>
+                  </button>
+                </div>
+                {newBarber.isOnLeave && (
+                  <input
+                    type="text"
+                    placeholder="Reason for leave (e.g. Weekly Off, Sick, Personal)..."
+                    value={newBarber.leaveReason || ''}
+                    onChange={(e) => setNewBarber({ ...newBarber, leaveReason: e.target.value })}
+                    className="mt-2 w-full px-3 py-2 text-xs rounded-xl border border-amber-300 bg-amber-50/50 text-amber-950 focus:ring-2 focus:ring-amber-500"
+                  />
+                )}
+              </div>
+
               {/* Photo Avatar Preset Selector */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Choose Stylist Photo</label>
@@ -1442,6 +1974,48 @@ export default function OwnerDashboard({
                   onChange={(e) => setEditingBarber({ ...editingBarber, role: e.target.value })}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white"
                 />
+              </div>
+
+              {/* Attendance Status */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Today's Attendance Status
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingBarber({ ...editingBarber, isOnLeave: false })}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                      !editingBarber.isOnLeave
+                        ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-2xs'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span>🟢 On Duty / Present</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingBarber({ ...editingBarber, isOnLeave: true })}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                      editingBarber.isOnLeave
+                        ? 'bg-amber-50 border-amber-500 text-amber-800 shadow-2xs'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                    <span>🌴 On Leave Today</span>
+                  </button>
+                </div>
+                {editingBarber.isOnLeave && (
+                  <input
+                    type="text"
+                    placeholder="Reason for leave (e.g. Weekly Off, Sick, Personal)..."
+                    value={editingBarber.leaveReason || ''}
+                    onChange={(e) => setEditingBarber({ ...editingBarber, leaveReason: e.target.value })}
+                    className="mt-2 w-full px-3 py-2 text-xs rounded-xl border border-amber-300 bg-amber-50/50 text-amber-950 focus:ring-2 focus:ring-amber-500"
+                  />
+                )}
               </div>
 
               {/* Photo Avatar Preset Selector */}
