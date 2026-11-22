@@ -62,7 +62,7 @@ export default function TabletStation({
   const barberTodayStats = useMemo(() => {
     const map = {};
     barbers.forEach((b) => {
-      map[b.id] = { cuts: 0, revenue: 0, commission: 0 };
+      map[b.id] = { cuts: 0, revenue: 0 };
     });
 
     todayTransactions.forEach((t) => {
@@ -70,7 +70,6 @@ export default function TabletStation({
         const cutCount = t.services.reduce((acc, s) => acc + (s.quantity || 1), 0);
         map[t.barberId].cuts += cutCount;
         map[t.barberId].revenue += t.finalAmount || 0;
-        map[t.barberId].commission += t.barberCommission || 0;
       }
     });
 
@@ -211,9 +210,6 @@ export default function TabletStation({
                       <span className="inline-block bg-blue-600 text-white font-mono font-extrabold text-xs px-2.5 py-1 rounded-lg tracking-wider shadow-xs">
                         {barber.badgeId}
                       </span>
-                      <p className="text-[11px] text-slate-400 mt-1.5">
-                        Comm: <strong className="text-slate-800">{barber.commissionRate}%</strong>
-                      </p>
                     </div>
                   </div>
 
@@ -327,7 +323,7 @@ export default function TabletStation({
                   <h3 className="text-lg font-bold text-slate-900">
                     Edit Employee: {editingBarberDirect.name}
                   </h3>
-                  <p className="text-xs text-slate-500">Update stylist name, badge ID, commission %, and photo</p>
+                  <p className="text-xs text-slate-500">Update stylist name, badge ID, role, and photo</p>
                 </div>
               </div>
               <button
@@ -362,37 +358,25 @@ export default function TabletStation({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Commission Rate (%)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={editingBarberDirect.commissionRate}
-                    onChange={(e) => setEditingBarberDirect({ ...editingBarberDirect, commissionRate: Number(e.target.value) })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Role / Title</label>
-                  <input
-                    type="text"
-                    value={editingBarberDirect.role}
-                    onChange={(e) => setEditingBarberDirect({ ...editingBarberDirect, role: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Phone Number</label>
                   <input
                     type="tel"
+                    placeholder="e.g. 9876543210"
                     value={editingBarberDirect.phone || ''}
                     onChange={(e) => setEditingBarberDirect({ ...editingBarberDirect, phone: e.target.value })}
                     className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Role / Title</label>
+                <input
+                  type="text"
+                  value={editingBarberDirect.role}
+                  onChange={(e) => setEditingBarberDirect({ ...editingBarberDirect, role: e.target.value })}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-blue-500"
+                />
               </div>
 
               {/* Photo Avatar Preset Selector */}

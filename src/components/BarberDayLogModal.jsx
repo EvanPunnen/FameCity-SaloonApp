@@ -14,7 +14,6 @@ export default function BarberDayLogModal({ isOpen, onClose, barber, todayTransa
   );
 
   const totalRevenue = barberTxns.reduce((acc, t) => acc + (t.finalAmount || 0), 0);
-  const totalCommission = barberTxns.reduce((acc, t) => acc + (t.barberCommission || 0), 0);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
@@ -35,23 +34,23 @@ export default function BarberDayLogModal({ isOpen, onClose, barber, todayTransa
                   {barber.badgeId}
                 </span>
               </div>
-              <p className="text-xs text-amber-200/80 mt-0.5">{barber.role}</p>
+              <p className="text-xs text-blue-200/90 mt-0.5">{barber.role}</p>
               <p className="text-xs text-slate-400 mt-1">
-                Today's Performance Log • Commission Rate: {barber.commissionRate}%
+                Today's Daily Performance Log
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition"
+            className="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Quick Metrics Bar */}
-        <div className="grid grid-cols-3 gap-3 p-5 bg-amber-50/50 border-b border-amber-100">
-          <div className="bg-white p-3.5 rounded-2xl border border-amber-200/70 shadow-2xs">
+        <div className="grid grid-cols-2 gap-3 p-5 bg-blue-50/50 border-b border-blue-100">
+          <div className="bg-white p-3.5 rounded-2xl border border-blue-200 shadow-2xs">
             <span className="text-xs text-slate-500 font-semibold uppercase block">Services Done</span>
             <div className="flex items-baseline gap-1 mt-1">
               <span className="text-2xl font-black text-slate-900">{totalCuts}</span>
@@ -59,20 +58,11 @@ export default function BarberDayLogModal({ isOpen, onClose, barber, todayTransa
             </div>
           </div>
 
-          <div className="bg-white p-3.5 rounded-2xl border border-amber-200/70 shadow-2xs">
+          <div className="bg-white p-3.5 rounded-2xl border border-blue-200 shadow-2xs">
             <span className="text-xs text-slate-500 font-semibold uppercase block">Total Sales</span>
             <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-2xl font-black text-amber-600">
+              <span className="text-2xl font-black text-blue-700">
                 {formatCurrency(totalRevenue, salonInfo.currency)}
-              </span>
-            </div>
-          </div>
-
-          <div className="bg-white p-3.5 rounded-2xl border border-emerald-200 shadow-2xs">
-            <span className="text-xs text-emerald-800 font-semibold uppercase block">My Commission</span>
-            <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-2xl font-black text-emerald-600">
-                {formatCurrency(totalCommission, salonInfo.currency)}
               </span>
             </div>
           </div>
@@ -122,13 +112,10 @@ export default function BarberDayLogModal({ isOpen, onClose, barber, todayTransa
                 </div>
 
                 <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-xs font-bold">
-                  <span className="text-slate-500">
-                    Commission ({barber.commissionRate}%):{' '}
-                    <strong className="text-emerald-700">
-                      {formatCurrency(txn.barberCommission, salonInfo.currency)}
-                    </strong>
+                  <span className="text-slate-500 font-medium">
+                    Payment Mode: <strong className="text-slate-800 uppercase">{txn.paymentMethod}</strong>
                   </span>
-                  <span className="text-slate-900 text-sm">
+                  <span className="text-blue-900 font-extrabold text-sm">
                     {formatCurrency(txn.finalAmount, salonInfo.currency)}
                   </span>
                 </div>

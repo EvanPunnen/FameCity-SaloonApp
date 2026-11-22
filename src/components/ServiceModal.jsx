@@ -230,7 +230,7 @@ export default function ServiceModal({
                 </span>
               </div>
               <p className="text-xs text-slate-500">
-                Stylist Comm: <strong className="text-slate-800">{barber.commissionRate}%</strong> • Tap services to add
+                Tap services below to add to bill
               </p>
             </div>
           </div>

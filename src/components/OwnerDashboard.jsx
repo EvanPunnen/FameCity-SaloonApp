@@ -155,12 +155,6 @@ export default function OwnerDashboard({
   const totalClientsCount = filteredTransactions.length;
   const avgTicketValue = totalClientsCount > 0 ? Math.round(totalGrossSales / totalClientsCount) : 0;
 
-  const totalCommissionPayout = useMemo(() => {
-    return filteredTransactions.reduce((acc, t) => acc + (t.barberCommission || 0), 0);
-  }, [filteredTransactions]);
-
-  const netSalonProfit = totalGrossSales - totalCommissionPayout;
-
   // Monthly Sales Total
   const monthlyTotalSales = useMemo(() => {
     const now = new Date();
@@ -203,8 +197,6 @@ export default function OwnerDashboard({
         cuts: 0,
         tickets: 0,
         revenue: 0,
-        commission: 0,
-        salonShare: 0,
         topServices: {}
       };
     });
@@ -215,8 +207,6 @@ export default function OwnerDashboard({
         map[t.barberId].cuts += itemCuts;
         map[t.barberId].tickets += 1;
         map[t.barberId].revenue += t.finalAmount || 0;
-        map[t.barberId].commission += t.barberCommission || 0;
-        map[t.barberId].salonShare += (t.finalAmount || 0) - (t.barberCommission || 0);
 
         t.services.forEach((s) => {
           map[t.barberId].topServices[s.name] = (map[t.barberId].topServices[s.name] || 0) + (s.quantity || 1);
@@ -578,21 +568,21 @@ export default function OwnerDashboard({
                 </div>
               </div>
 
-              {/* Card 4: Net Salon Profit */}
+              {/* Card 4: Avg Spend per Customer */}
               <div className="bg-white p-5 rounded-3xl border border-emerald-200 shadow-xs relative overflow-hidden bg-gradient-to-br from-white to-emerald-50/30">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold uppercase text-emerald-800 tracking-wider">
-                    Owner Net Profit
+                    Avg Ticket Size
                   </span>
                   <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
                     <DollarSign className="w-5 h-5" />
                   </div>
                 </div>
                 <div className="text-3xl font-black text-emerald-600 tracking-tight">
-                  {formatCurrency(netSalonProfit, salonInfo.currency)}
+                  {formatCurrency(avgTicketValue, salonInfo.currency)}
                 </div>
                 <div className="mt-2 text-xs text-slate-500">
-                  After paying {formatCurrency(totalCommissionPayout, salonInfo.currency)} commission
+                  Average spend across <strong>{totalClientsCount}</strong> customer visits
                 </div>
               </div>
 
@@ -700,7 +690,7 @@ export default function OwnerDashboard({
                             {formatCurrency(barber.revenue, salonInfo.currency)}
                           </div>
                           <p className="text-[11px] text-blue-600 font-semibold">
-                            Comm: {formatCurrency(barber.commission, salonInfo.currency)} ({barber.commissionRate}%)
+                            {barber.cuts} services done
                           </p>
                         </div>
                       </div>
@@ -775,7 +765,7 @@ export default function OwnerDashboard({
                   Manage Barbers & Performance
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Click <strong>"Edit"</strong> on any stylist card to update their name, avatar, badge ID, or commission %
+                  Click <strong>"Edit"</strong> on any stylist card to update their name, avatar, badge ID, or role
                 </p>
               </div>
 
@@ -798,9 +788,7 @@ export default function OwnerDashboard({
                       <th className="py-4 px-4 text-center">Services Done</th>
                       <th className="py-4 px-4 text-center">Clients</th>
                       <th className="py-4 px-4 text-right">Total Revenue</th>
-                      <th className="py-4 px-4 text-right">Commission</th>
-                      <th className="py-4 px-4 text-right">Stylist Payout</th>
-                      <th className="py-4 px-4 text-right">Salon Share</th>
+                      <th className="py-4 px-4 text-right">Avg / Client</th>
                       <th className="py-4 px-6 text-center">Manage</th>
                     </tr>
                   </thead>
@@ -843,16 +831,8 @@ export default function OwnerDashboard({
                           {formatCurrency(b.revenue, salonInfo.currency)}
                         </td>
 
-                        <td className="py-4 px-4 text-right font-mono font-semibold text-slate-600">
-                          {b.commissionRate}%
-                        </td>
-
-                        <td className="py-4 px-4 text-right font-bold text-blue-600">
-                          {formatCurrency(b.commission, salonInfo.currency)}
-                        </td>
-
-                        <td className="py-4 px-4 text-right font-black text-slate-900">
-                          {formatCurrency(b.salonShare, salonInfo.currency)}
+                        <td className="py-4 px-4 text-right font-semibold text-slate-700">
+                          {formatCurrency(b.tickets > 0 ? Math.round(b.revenue / b.tickets) : 0, salonInfo.currency)}
                         </td>
 
                         <td className="py-4 px-6 text-center">
@@ -908,10 +888,6 @@ export default function OwnerDashboard({
                     </div>
 
                     <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs space-y-1 mb-3">
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Commission Rate:</span>
-                        <strong className="text-slate-900">{b.commissionRate}%</strong>
-                      </div>
                       <div className="flex justify-between">
                         <span className="text-slate-500">Contact:</span>
                         <span>{b.phone || 'N/A'}</span>
@@ -1118,14 +1094,13 @@ export default function OwnerDashboard({
                       <th className="py-3.5 px-4">Services Rendered</th>
                       <th className="py-3.5 px-4 text-center">Payment</th>
                       <th className="py-3.5 px-4 text-right">Amount</th>
-                      <th className="py-3.5 px-4 text-right">Commission</th>
                       <th className="py-3.5 px-4 text-center">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {auditTransactions.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="py-12 text-center text-slate-400 text-sm">
+                        <td colSpan={8} className="py-12 text-center text-slate-400 text-sm">
                           No transactions matching criteria.
                         </td>
                       </tr>
@@ -1170,9 +1145,6 @@ export default function OwnerDashboard({
                           </td>
                           <td className="py-3.5 px-4 text-right font-black text-slate-900 text-sm">
                             {formatCurrency(txn.finalAmount, salonInfo.currency)}
-                          </td>
-                          <td className="py-3.5 px-4 text-right font-semibold text-blue-600">
-                            {formatCurrency(txn.barberCommission, salonInfo.currency)}
                           </td>
                           <td className="py-3.5 px-4 text-center">
                             <div className="flex items-center justify-center gap-1.5">
@@ -1345,30 +1317,6 @@ export default function OwnerDashboard({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Commission %</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={newBarber.commissionRate}
-                    onChange={(e) => setNewBarber({ ...newBarber, commissionRate: Number(e.target.value) })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Role / Title</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Senior Hair Stylist"
-                    value={newBarber.role}
-                    onChange={(e) => setNewBarber({ ...newBarber, role: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Mobile Phone</label>
                   <input
                     type="tel"
@@ -1378,6 +1326,17 @@ export default function OwnerDashboard({
                     className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Role / Title</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Senior Hair Stylist"
+                  value={newBarber.role}
+                  onChange={(e) => setNewBarber({ ...newBarber, role: e.target.value })}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:ring-1 focus:ring-blue-500"
+                />
               </div>
 
               {/* Photo Avatar Preset Selector */}
@@ -1465,29 +1424,6 @@ export default function OwnerDashboard({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Commission Rate (%)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={editingBarber.commissionRate}
-                    onChange={(e) => setEditingBarber({ ...editingBarber, commissionRate: Number(e.target.value) })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Role / Title</label>
-                  <input
-                    type="text"
-                    value={editingBarber.role}
-                    onChange={(e) => setEditingBarber({ ...editingBarber, role: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white"
-                  />
-                </div>
-                <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Phone Number</label>
                   <input
                     type="tel"
@@ -1496,6 +1432,16 @@ export default function OwnerDashboard({
                     className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Role / Title</label>
+                <input
+                  type="text"
+                  value={editingBarber.role}
+                  onChange={(e) => setEditingBarber({ ...editingBarber, role: e.target.value })}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white"
+                />
               </div>
 
               {/* Photo Avatar Preset Selector */}

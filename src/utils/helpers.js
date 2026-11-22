@@ -74,14 +74,11 @@ export const exportToCSV = (transactions, filename = 'famecity-sales-report.csv'
     'Gross Total',
     'Discount',
     'Net Amount',
-    'Barber Commission',
-    'Salon Net Share',
     'Status'
   ];
 
   const rows = transactions.map((t) => {
     const srvNames = t.services.map((s) => `${s.name} (x${s.quantity || 1})`).join('; ');
-    const salonShare = (t.finalAmount || 0) - (t.barberCommission || 0);
     return [
       `"${t.id}"`,
       `"${t.date}"`,
@@ -95,8 +92,6 @@ export const exportToCSV = (transactions, filename = 'famecity-sales-report.csv'
       t.totalAmount,
       t.discount || 0,
       t.finalAmount,
-      t.barberCommission || 0,
-      salonShare,
       `"${t.status}"`
     ];
   });
